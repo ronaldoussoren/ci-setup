@@ -1,0 +1,191 @@
+#!/usr/bin/env python3
+"""
+Install a couple of variants of Python
+using the Python.org installers
+"""
+import dataclasses
+import typing
+import pathlib
+import shutil
+import urllib.request
+import tempfile
+import hashlib
+import plistlib
+import subprocess
+import os
+import ssl
+
+PYTHON_FRAMEWORK = pathlib.Path("/Library/Frameworks/Python.framework")
+
+@dataclasses.dataclass
+class PythonInfo:
+    url: str
+    sha256: typing.Optional[str] = None
+    variant: typing.Optional[str] = None
+
+PYTHONS=[
+    PythonInfo(
+        url="https://www.python.org/ftp/python/3.7.9/python-3.7.9-macosx10.9.pkg",
+        sha256="bf54a14eef23467991e8c7a88c7307762e484c024a94ec1ee292ac1db3d41fc9",
+    ),
+    PythonInfo(
+        url="https://www.python.org/ftp/python/3.8.8/python-3.8.8-macosx10.9.pkg",
+        sha256="b0c1b84436fc32b5d374a5c1e1005d9216f2fd8fa3d49ea7e91e1746f6fc7d59"),
+    PythonInfo(
+        url="https://www.python.org/ftp/python/3.9.2/python-3.9.2-macosx10.9.pkg",
+        sha256="86e099ad1cee81e2b84680de69ac7200fe2b4e86e5c410f0eb5effd12db72862",
+        variant="x86_64",
+    ),
+    PythonInfo(
+        url="https://www.python.org/ftp/python/3.9.2/python-3.9.2-macos11.pkg",
+        sha256="a1aeccacafbf6cd43139b457162f9bd7ca6b4cc27fb667cce5fef696d7ae78c3",
+        variant="universal2",
+    ),
+    PythonInfo(
+        url="https://www.python.org/ftp/python/3.10.0/python-3.10.0a6-macos11.pkg",
+        sha256="43656db9df6a78aa677035ee6461ddcd8935f117a73c6a2767ff5fbce26fe83d",
+    ),
+         
+]
+
+
+def remove_pythons() -> None:
+    if PYTHON_FRAMEWORK.exists():
+        print(f"* Removing {PYTHON_FRAMEWORK}")
+        shutil.rmtree(PYTHON_FRAMEWORK)
+
+
+def have_download(path : pathlib.Path, sha256: str) -> bool:
+    if not path.exists():
+        return False
+
+    with open(path, "rb") as fp:
+        h = hashlib.sha256()
+        while True:
+            block = fp.read(128 * 1024)
+            if not block: 
+                break
+            h.update(block)
+
+        return h.hexdigest() == sha256
+     
+
+def download(url : str, sha256 : typing.Optional[str], directory: pathlib.Path) -> pathlib.Path:
+    fn = os.path.basename(url)
+    installer_path = directory / fn
+    if sha256 is not None and have_download(installer_path, sha256):
+        print(f"* Use cached {url!r}")
+        return installer_path
+
+    print(f"* Downloading {url!r}")
+    with urllib.request.urlopen(url) as fp_in:
+        with open(installer_path, "wb") as fp_out:
+            try:
+                while True:
+                    block = fp_in.read(128 * 1024)
+                    if not block: break
+                    fp_out.write(block)
+            except:
+                os.unlink(fp_out.name)
+                raise
+    return installer_path
+
+
+def install_certify(prefix: pathlib.Path) -> None:
+    """
+    Adapted from the "Install Certificates.command" file
+    in a normal installation. This file won't be installed
+    because this script doesn't install the GUI applications
+
+    This function runs outside of the installed python, making
+    it slightly more cumbersome to inspect the installation.
+    """
+
+    print(" -- pip install --upgrade certifi")
+    subprocess.check_call([prefix / "bin" / "python3",
+        "-E", "-s", "-m", "pip", "install", "--upgrade", "certifi"])
+
+    import certifi
+
+    openssl_dir, openssl_cafile = os.path.split(
+        ssl.get_default_verify_paths().openssl_cafile)
+
+    # change working directory to the default SSL directory
+    os.chdir(openssl_dir)
+    relpath_to_certifi_cafile = os.path.relpath(certifi.where())
+    print(" -- removing any existing file or link")
+    try:
+        os.remove(openssl_cafile)
+    except FileNotFoundError:
+        pass
+    print(" -- creating symlink to certifi certificate bundle")
+    os.symlink(relpath_to_certifi_cafile, openssl_cafile)
+    os.chmod(openssl_cafile, 0o775)
+
+
+def install_python(installer_path: pathlib.Path, variant: typing.Optional[str]) -> None:
+     """
+     Perform an installation of Python, move to a variant directory if specified
+
+     This will only install the framework itself with pip and won't 
+     install GUI tools or stuff in /usr/local.
+     """
+     version = installer_path.name.split("-")[1]
+     version = ".".join(version.split(".")[:2])
+     print(f"* Installing {version} from {installer_path}")
+     config_bytes = subprocess.check_output(["installer", "-showChoiceChangesXML", "-pkg", str(installer_path)])
+     config = plistlib.loads(config_bytes)
+
+     # Update the configuration
+     to_enable = {
+         "org.python.Python.PythonFramework-",
+         "org.python.Python.PythonInstallPip-",
+     }
+     for item in config:
+         if item["choiceAttribute"] != "selected":
+             continue
+         if any(item["choiceIdentifier"].startswith(nm) for nm in to_enable):
+            item["attributeSetting"] = 1
+         else:
+            item["attributeSetting"] = 0
+
+     # Install using updated configuration
+     with tempfile.NamedTemporaryFile() as stream:
+        plistlib.dump(config, stream, fmt=plistlib.FMT_XML)
+        stream.flush()
+
+        subprocess.check_call(["installer", "-applyChoiceChangesXML", stream.name, "-pkg", str(installer_path), "-target", "/"])
+
+
+     # Post-install: ensure certify is installed
+     #install_certify(PYTHON_FRAMEWORK / version)
+
+
+     # Variant update
+     if variant is not None:
+         (PYTHON_FRAMEWORK / "Versions" / version).rename(PYTHON_FRAMEWORK / "Versions" / f"{version}-{variant}")
+
+
+def main() -> None:
+    directory = pathlib.Path(__file__).parent / "downloads"
+    if not directory.exists():
+        directory.mkdir()
+
+    remove_pythons()
+
+    for info in  PYTHONS:
+        installer_file = download(info.url, info.sha256, directory)
+
+        install_python(installer_file, info.variant)
+
+    seen = set()
+    for child in reversed(list((PYTHON_FRAMEWORK / "Versions").iterdir())):
+       if "-" in child.name:
+           base = child.name.split("-")[0]
+           if base in seen: continue
+           seen.add(base)
+           print(f"* link {child.name} to {base}")
+           os.symlink(child.name, PYTHON_FRAMEWORK / "Versions" / base)
+
+if __name__ == "__main__":
+    main()
