@@ -1,0 +1,41 @@
+#!/usr/bin/env python3
+"""
+This requires that "install-python" has
+been run.
+
+For now use Python 3.8 for tooling, mostly
+because there's only one variant.
+"""
+import pathlib
+import subprocess
+
+PYTHON = "/Library/Frameworks/Python.framework/Versions/3.8/bin/python3"
+
+STANDARD_TOOLING = [
+    "black",
+    "flake8",
+    "flit",
+    "pre-commit",
+    "tox",
+    "twine",
+]
+
+
+def install_pipx():
+    print("* Installing pipx")
+    subprocess.check_output([PYTHON, "-m", "pip", "install", "-U", "pipx"])
+
+
+def install_tooling():
+    for pkg in STANDARD_TOOLING:
+        print(f"* Installing {pkg}")
+        subprocess.check_output([PYTHON, "-m", "pipx", "install", "--force", pkg])
+
+
+def main():
+    install_pipx()
+    install_tooling()
+
+
+if __name__ == "__main__":
+    main()

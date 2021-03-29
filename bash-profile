@@ -1,0 +1,14 @@
+export PATH
+
+for dn in $(ls /Library/Frameworks/Python.framework/Versions)
+do
+   case "${dn}" in 
+   Current) : ;;
+   *-*) : ;;
+   *)
+       PATH="/Library/Frameworks/Python.framework/Versions/${dn}/bin:${PATH}"
+       ;;
+   esac
+done
+
+PATH="${HOME}/.local/bin:${PATH}"
