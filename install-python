@@ -35,13 +35,13 @@ PYTHONS = [
         sha256="b0c1b84436fc32b5d374a5c1e1005d9216f2fd8fa3d49ea7e91e1746f6fc7d59",
     ),
     PythonInfo(
-        url="https://www.python.org/ftp/python/3.9.2/python-3.9.2-macosx10.9.pkg",
-        sha256="86e099ad1cee81e2b84680de69ac7200fe2b4e86e5c410f0eb5effd12db72862",
+        url="https://www.python.org/ftp/python/3.9.2/python-3.9.4-macosx10.9.pkg",
+        sha256="ee8a24144809a583d6d4c3c4818d94f2d58218a148c33e749d2bd4ded849bb7c",
         variant="x86_64",
     ),
     PythonInfo(
-        url="https://www.python.org/ftp/python/3.9.2/python-3.9.2-macos11.pkg",
-        sha256="a1aeccacafbf6cd43139b457162f9bd7ca6b4cc27fb667cce5fef696d7ae78c3",
+        url="https://www.python.org/ftp/python/3.9.2/python-3.9.4-macos11.pkg",
+        sha256="7ebb1f7f86c5e9f83ab64d4ed44105c9f4d08262f6e11b73281dfa98e7293752",
         variant="universal2",
     ),
     PythonInfo(
