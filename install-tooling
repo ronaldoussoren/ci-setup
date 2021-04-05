@@ -6,7 +6,6 @@ been run.
 For now use Python 3.8 for tooling, mostly
 because there's only one variant.
 """
-import pathlib
 import subprocess
 
 PYTHON = "/Library/Frameworks/Python.framework/Versions/3.8/bin/python3"

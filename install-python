@@ -13,7 +13,6 @@ import hashlib
 import plistlib
 import subprocess
 import os
-import ssl
 
 PYTHON_FRAMEWORK = pathlib.Path("/Library/Frameworks/Python.framework")
 
@@ -90,7 +89,7 @@ def download(
                     if not block:
                         break
                     fp_out.write(block)
-            except:
+            except:  # noqa: E722
                 os.unlink(fp_out.name)
                 raise
     return installer_path
