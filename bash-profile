@@ -1,5 +1,16 @@
 export PATH
 
+for dn in $(ls /Library/Frameworks/PythonT.framework/Versions)
+do
+   case "${dn}" in 
+   Current) : ;;
+   *-*) : ;;
+   *)
+       PATH="/Library/Frameworks/PythonT.framework/Versions/${dn}/bin:${PATH}"
+       ;;
+   esac
+done
+
 for dn in $(ls /Library/Frameworks/Python.framework/Versions)
 do
    case "${dn}" in 

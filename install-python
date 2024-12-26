@@ -17,35 +17,41 @@ import os
 PYTHON_FRAMEWORK = pathlib.Path("/Library/Frameworks/Python.framework")
 
 
+#
+# Note: The info contains an md5 checksum because that's what mentioned
+#       on the download page on www.python.org.  Should be fine because
+#       the checksum is primairily used to detect download problems.
 @dataclasses.dataclass
 class PythonInfo:
     url: str
-    sha256: typing.Optional[str] = None
+    md5: typing.Optional[str] = None
     variant: typing.Optional[str] = None
 
 
 PYTHONS = [
     PythonInfo(
-        url="https://www.python.org/ftp/python/3.7.9/python-3.7.9-macosx10.9.pkg",
-        sha256="bf54a14eef23467991e8c7a88c7307762e484c024a94ec1ee292ac1db3d41fc9",
+        url="https://www.python.org/ftp/python/3.9.13/python-3.9.13-macos11.pkg",
+        md5="76b63cf623e32cdf27c5033434bd69ce",
     ),
     PythonInfo(
-        url="https://www.python.org/ftp/python/3.8.8/python-3.8.8-macosx10.9.pkg",
-        sha256="b0c1b84436fc32b5d374a5c1e1005d9216f2fd8fa3d49ea7e91e1746f6fc7d59",
+        url="https://www.python.org/ftp/python/3.10.11/python-3.10.11-macos11.pkg",
+        md5="f5f791f8e8bfb829f23860ab08712005",
     ),
     PythonInfo(
-        url="https://www.python.org/ftp/python/3.9.2/python-3.9.4-macosx10.9.pkg",
-        sha256="ee8a24144809a583d6d4c3c4818d94f2d58218a148c33e749d2bd4ded849bb7c",
-        variant="x86_64",
+        url="https://www.python.org/ftp/python/3.11.9/python-3.11.9-macos11.pkg",
+        md5="fa29f456feb6b5c4f52456a8b8ba347b",
     ),
     PythonInfo(
-        url="https://www.python.org/ftp/python/3.9.2/python-3.9.4-macos11.pkg",
-        sha256="7ebb1f7f86c5e9f83ab64d4ed44105c9f4d08262f6e11b73281dfa98e7293752",
-        variant="universal2",
+        url="https://www.python.org/ftp/python/3.12.8/python-3.12.8-macos11.pkg",
+        md5="dc762fdc78e9cfecf516db31054de9fd",
     ),
     PythonInfo(
-        url="https://www.python.org/ftp/python/3.10.0/python-3.10.0a6-macos11.pkg",
-        sha256="43656db9df6a78aa677035ee6461ddcd8935f117a73c6a2767ff5fbce26fe83d",
+        url="https://www.python.org/ftp/python/3.13.1/python-3.13.12-macos11.pkg",
+        md5="19e5a1d9e8264c88706ac9604c526e9b",
+    ),
+    PythonInfo(
+        url="https://www.python.org/ftp/python/3.14.0/python-3.14.0a3-macos11.pkg",
+        md5="2007a35ff5c90597bce6baf04cafd375",
     ),
 ]
 
@@ -56,27 +62,27 @@ def remove_pythons() -> None:
         shutil.rmtree(PYTHON_FRAMEWORK)
 
 
-def have_download(path: pathlib.Path, sha256: str) -> bool:
+def have_download(path: pathlib.Path, md5: str) -> bool:
     if not path.exists():
         return False
 
     with open(path, "rb") as fp:
-        h = hashlib.sha256()
+        h = hashlib.md5()
         while True:
             block = fp.read(128 * 1024)
             if not block:
                 break
             h.update(block)
 
-        return h.hexdigest() == sha256
+        return h.hexdigest() == md5
 
 
 def download(
-    url: str, sha256: typing.Optional[str], directory: pathlib.Path
+    url: str, md5: typing.Optional[str], directory: pathlib.Path
 ) -> pathlib.Path:
     fn = os.path.basename(url)
     installer_path = directory / fn
-    if sha256 is not None and have_download(installer_path, sha256):
+    if md5 is not None and have_download(installer_path, md5):
         print(f"* Use cached {url!r}")
         return installer_path
 
@@ -146,6 +152,7 @@ def install_python(installer_path: pathlib.Path, variant: typing.Optional[str]) 
     to_enable = {
         "org.python.Python.PythonFramework-",
         "org.python.Python.PythonInstallPip-",
+        "org.python.Python.PythonTFramework-",
     }
     for item in config:
         if item["choiceAttribute"] != "selected":
@@ -193,7 +200,7 @@ def main() -> None:
     remove_pythons()
 
     for info in PYTHONS:
-        installer_file = download(info.url, info.sha256, directory)
+        installer_file = download(info.url, info.md5, directory)
 
         install_python(installer_file, info.variant)
 
